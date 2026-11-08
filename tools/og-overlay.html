@@ -1,0 +1,83 @@
+<!doctype html>
+<!-- Transparent 1200x630 overlay for the share image: the bow drawn back with a loaded arrow, aimed at the
+     orange demon. Geometry mirrors buildTextures() and drawBow() in src/game.js. Rendered by make-og-image.sh. -->
+<html>
+<body style="margin:0;background:transparent">
+<canvas id="c" width="1200" height="630"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const hex = (n, a = 1) => `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`;
+const GOLD = 0xffd56b, DARK = 0x3a1300, ORANGE = 0xff9a2e, ARROW_LEN = 100;
+
+const BOW = { x: 185, y: 485 }, SCALE = 1.9, PULL = 0.85;
+const TARGET = { x: 375, y: 135 };   // orange demon's center in the composed image
+const a = Math.atan2(TARGET.y - BOW.y, TARGET.x - BOW.x);
+const cos = Math.cos(a), sin = Math.sin(a);
+const P = (lx, ly) => ({ x: BOW.x + SCALE * (lx * cos - ly * sin), y: BOW.y + SCALE * (lx * sin + ly * cos) });
+
+function glow(x, y, r, color, alpha) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+  g.addColorStop(0, hex(color, alpha)); g.addColorStop(1, hex(color, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+}
+
+// Aim guide: gold dots from the arrow tip to a ring around the target, like the in-game guide.
+const tip = P(-6 - PULL * 46 + ARROW_LEN - 6, 0);
+const dist = Math.hypot(TARGET.x - tip.x, TARGET.y - tip.y) - 78;
+for (let d = 26; d < dist; d += 24) {
+  const t = d / dist;
+  ctx.fillStyle = hex(0xffe9a0, 0.9 - t * 0.4);
+  ctx.beginPath(); ctx.arc(tip.x + cos * d, tip.y + sin * d, 4.5, 0, Math.PI * 2); ctx.fill();
+}
+ctx.lineWidth = 6; ctx.strokeStyle = hex(ORANGE, 0.95);
+ctx.shadowColor = hex(ORANGE); ctx.shadowBlur = 18;
+ctx.beginPath(); ctx.arc(TARGET.x, TARGET.y, 80, 0, Math.PI * 2); ctx.stroke();
+ctx.shadowBlur = 0;
+
+glow(BOW.x, BOW.y, 150, 0xffa83a, 0.45);
+
+// Bow string and limb.
+const limb = [];
+for (let i = 0; i <= 24; i++) {
+  const t = -1 + (2 * i) / 24;
+  const recurve = Math.abs(t) > 0.82 ? (Math.abs(t) - 0.82) * 70 : 0;
+  limb.push(P(30 * (1 - t * t) - 6 + recurve - PULL * 6 * t * t, 82 * t));
+}
+const tipA = limb[0], tipB = limb[limb.length - 1];
+const nock = P(-6 - PULL * 46, 0);
+ctx.lineCap = ctx.lineJoin = 'round';
+ctx.lineWidth = 3 * SCALE; ctx.strokeStyle = hex(0xfff3d6, 0.95);
+ctx.beginPath(); ctx.moveTo(tipA.x, tipA.y); ctx.lineTo(nock.x, nock.y); ctx.lineTo(tipB.x, tipB.y); ctx.stroke();
+
+[[14, 0x3a1300], [9, 0xe2a12b], [3, 0xffe9a0]].forEach(([w, col]) => {
+  ctx.lineWidth = w * SCALE; ctx.strokeStyle = hex(col);
+  ctx.beginPath(); limb.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.stroke();
+});
+const dot = (p, r, c) => { ctx.fillStyle = hex(c); ctx.beginPath(); ctx.arc(p.x, p.y, r * SCALE, 0, Math.PI * 2); ctx.fill(); };
+const grip = P(24, 0);
+dot(grip, 11, 0xb3122e); dot(grip, 5, GOLD);
+[tipA, tipB].forEach((p) => { dot(p, 8, DARK); dot(p, 5, GOLD); });
+
+// Loaded arrow (drawn in its own frame: nock at the origin, pointing along +x).
+ctx.save();
+ctx.translate(nock.x, nock.y); ctx.rotate(a); ctx.scale(SCALE, SCALE);
+const tri = (pts, fill, stroke) => {
+  ctx.beginPath(); ctx.moveTo(...pts[0]); ctx.lineTo(...pts[1]); ctx.lineTo(...pts[2]); ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.lineWidth = 2; ctx.strokeStyle = stroke; ctx.stroke(); }
+};
+const head = ARROW_LEN - 30;
+tri([[0, 0], [24, 0], [4, -12]], hex(ORANGE), hex(DARK));
+tri([[0, 0], [24, 0], [4, 12]], hex(ORANGE), hex(DARK));
+ctx.fillStyle = hex(DARK); ctx.fillRect(2, -3, head, 6);
+ctx.fillStyle = hex(0xb7792f); ctx.fillRect(3, -2, head - 2, 4);
+ctx.fillStyle = hex(GOLD); ctx.fillRect(30, -3, 5, 6); ctx.fillRect(54, -3, 5, 6);
+tri([[head - 2, -15], [ARROW_LEN, 0], [head - 2, 15]], hex(DARK));
+tri([[head + 1, -11], [ARROW_LEN - 4, 0], [head + 1, 11]], hex(ORANGE));
+tri([[head + 4, -7], [ARROW_LEN - 10, -1], [head + 4, -1]], 'rgba(255,255,255,0.75)');
+ctx.restore();
+
+glow(tip.x, tip.y, 40, ORANGE, 0.7);
+</script>
+</body>
+</html>
