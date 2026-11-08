@@ -870,7 +870,7 @@ class GameScene extends Phaser.Scene {
     this.overlay('Shubh Deepavali!', `Level ${this.level} cleared\n+${bonus} bonus`, 'NEXT LEVEL', () => {
       this.level++;
       this.startLevel();
-    });
+    }, { label: 'from renderwolf', url: 'https://renderwolf.ai' });
   }
 
   gameOver() {
@@ -885,7 +885,7 @@ class GameScene extends Phaser.Scene {
     if (record) this.celebrate(4);
   }
 
-  overlay(title, body, label, onClick) {
+  overlay(title, body, label, onClick, link) {
     const box = this.add.container(W / 2, H / 2).setDepth(DEPTH.overlay);
     const dim = this.add.rectangle(0, 0, W, H, 0x050214, 0.6).setInteractive();
     const panel = this.add.graphics();
@@ -902,6 +902,16 @@ class GameScene extends Phaser.Scene {
     btn.add([bg, text(this, 0, 2, label, 42, { color: '#fff8e6' })]);
     btn.setSize(340, 92).setInteractive({ useHandCursor: true });
     box.add([dim, panel, t1, t2, btn]);
+    if (link) {
+      // Underlined link right under the title; opens in a new tab.
+      const a = text(this, 0, -74, link.label, 32, { color: '#9fd8ff', strokeThickness: 5 })
+        .setInteractive({ useHandCursor: true });
+      const underline = this.add.rectangle(0, -54, a.width - 12, 3, 0x9fd8ff);
+      a.on('pointerup', () => window.open(link.url, '_blank', 'noopener'));
+      a.on('pointerover', () => a.setColor('#ffffff'));
+      a.on('pointerout', () => a.setColor('#9fd8ff'));
+      box.add([a, underline]);
+    }
     box.setScale(0.6).setAlpha(0);
     this.tweens.add({ targets: box, scale: 1, alpha: 1, duration: 400, delay: 500, ease: 'Back.easeOut' });
     btn.once('pointerup', () => { box.destroy(); onClick(); });
