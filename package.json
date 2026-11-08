@@ -5,6 +5,7 @@
   "description": "Diwali Demon Pop: a bow-and-arrow bubble shooter built with Phaser 3",
   "scripts": {
     "start": "python3 -m http.server 8080",
-    "assets": "node tools/generate-assets.mjs"
+    "assets": "node tools/generate-assets.mjs",
+    "music": "node tools/generate-music.mjs"
   }
 }

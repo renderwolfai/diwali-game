@@ -37,6 +37,55 @@ const text = (scene, x, y, str, size, opts = {}) =>
 
 const bestScore = () => Number(localStorage.getItem('diwali-best') || 0);
 
+// Background music (composed with Lyria, see tools/generate-music.mjs): one track at a time,
+// crossfaded, sharing the mute setting with the sound effects.
+const Music = {
+  current: null,
+  want: null,
+  waiting: false,
+
+  play(scene, key, { loop = true, volume = 0.4 } = {}) {
+    const sound = scene.sound;
+    sound.mute = Sfx.muted;
+    this.want = { scene, key, loop, volume };
+    // Browsers block audio until the first tap; play whatever was last asked for once it unlocks.
+    if (sound.locked) {
+      if (!this.waiting) {
+        this.waiting = true;
+        sound.once(Phaser.Sound.Events.UNLOCKED, () => {
+          this.waiting = false;
+          const w = this.want;
+          this.play(w.scene, w.key, w);
+        });
+      }
+      return;
+    }
+    if (this.current?.key === key && this.current.isPlaying) return;
+    this.fadeOut(scene);
+    const track = sound.add(key, { loop, volume: 0 });
+    track.play();
+    this.current = track;
+    scene.tweens.add({ targets: track, volume, duration: 900 });
+  },
+
+  fadeOut(scene, duration = 700) {
+    const old = this.current;
+    this.current = null;
+    if (!old) return;
+    let done = false;
+    const kill = () => { if (!done) { done = true; old.destroy(); } };
+    scene.tweens.add({ targets: old, volume: 0, duration, onComplete: kill });
+    // If the scene restarts mid-fade its tweens die with it, so make sure the track still stops.
+    scene.events.once(Phaser.Scenes.Events.SHUTDOWN, kill);
+  },
+
+  toggleMute(scene) {
+    const muted = Sfx.toggleMute();
+    scene.sound.mute = muted;
+    return muted;
+  },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Boot: load art, build procedural textures
 // ─────────────────────────────────────────────────────────────────────────────
@@ -48,6 +97,7 @@ class BootScene extends Phaser.Scene {
     bar.x = W / 2 - 200;
     this.load.on('progress', (v) => { bar.width = 400 * v; });
     this.load.image('bg', 'assets/bg_portrait.jpg');
+    ['menu', 'game', 'win'].forEach((m) => this.load.audio(`music_${m}`, `assets/music/${m}.mp3`));
     DEMONS.forEach((d) => this.load.image(d.key, `assets/${d.key}.png`));
   }
 
@@ -243,6 +293,14 @@ class MenuScene extends Phaser.Scene {
     const best = bestScore();
     if (best) text(this, W / 2, 1035 + dy, `Best: ${best}`, 36, { color: '#ffe9a0' }).setDepth(DEPTH.hud);
 
+    const mute = text(this, W - 44, 46, Sfx.muted ? '🔇' : '🔊', 40, { strokeThickness: 0 })
+      .setDepth(DEPTH.hud).setInteractive({ useHandCursor: true });
+    const toggleMute = () => { Sfx.unlock(); mute.setText(Music.toggleMute(this) ? '🔇' : '🔊'); };
+    mute.on('pointerup', toggleMute);
+    this.input.keyboard.on('keydown-M', toggleMute);
+
+    Music.play(this, 'music_menu', { volume: 0.5 });
+
     const start = () => { Sfx.unlock(); this.scene.start('game'); };
     btn.on('pointerup', start);
     this.input.keyboard.once('keydown-SPACE', start);
@@ -290,6 +348,7 @@ class GameScene extends Phaser.Scene {
   }
 
   startLevel() {
+    Music.play(this, 'music_game', { volume: 0.35 });
     if (this.grid) this.grid.flat().forEach((c) => c && c.sprite.destroy());
     this.parity = 0;
     this.grid = Array.from({ length: MAX_ROWS }, () => new Array(COLS).fill(null));
@@ -489,7 +548,7 @@ class GameScene extends Phaser.Scene {
 
   toggleMute() {
     Sfx.unlock();
-    this.muteBtn.setText(Sfx.toggleMute() ? '🔇' : '🔊');
+    this.muteBtn.setText(Music.toggleMute(this) ? '🔇' : '🔊');
   }
 
   // ── Input ─────────────────────────────────────────────────────────────────
@@ -805,6 +864,7 @@ class GameScene extends Phaser.Scene {
     this.saveBest();
     this.updateHud();
     Sfx.win();
+    Music.play(this, 'music_win', { loop: false, volume: 0.6 });
     this.celebrate(6);
     this.time.delayedCall(1800, () => this.celebrate(4));
     this.overlay('Shubh Deepavali!', `Level ${this.level} cleared\n+${bonus} bonus`, 'NEXT LEVEL', () => {
@@ -817,6 +877,7 @@ class GameScene extends Phaser.Scene {
     this.state = 'over';
     const record = this.saveBest();
     Sfx.lose();
+    Music.fadeOut(this, 1200);
     this.cameras.main.shake(300, 0.008);
     this.overlay('The demons\nreached the diyas!', `Score ${this.score}${record ? '\nNew best!' : ''}`, 'PLAY AGAIN', () => {
       this.scene.restart();

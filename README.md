@@ -88,5 +88,29 @@ npm run assets                          # only generates what's missing in asset
 node tools/generate-assets.mjs --force --only demon_blue,bg_portrait
 ```
 
-Credentials come from `VERTEX_SA_KEY` in `./.env` or `../storybook-kit/.env`. Sounds are synthesized at runtime
-with Web Audio (`src/sfx.js`), so there are no audio files.
+Credentials come from `VERTEX_SA_KEY` in `./.env` or `../storybook-kit/.env`. The login code is shared by both
+generator scripts (`tools/vertex.mjs`).
+
+## Music and sound
+
+The music in `assets/music/` was composed with Google Lyria (`lyria-002` on Vertex AI). Each prompt asks for
+fun, whimsical, instrumental casual-game music: glockenspiel, celesta, marimba, xylophone, pizzicato strings,
+woodwinds and light percussion.
+
+| Track      | When it plays                                   |
+|------------|-------------------------------------------------|
+| `menu.mp3` | Title screen. Cozy music-box feel, loops.       |
+| `game.mp3` | During play. Bouncy and playful, loops.         |
+| `win.mp3`  | Level cleared. A 7-second victory jingle.       |
+
+The music crossfades between tracks and fades out on game over. Lyria returns about 30 seconds per prompt, so
+the script crossfades the end of each looping track into its start so it repeats without a seam. It then
+encodes everything to MP3 with ffmpeg.
+
+```sh
+npm run music                           # only composes tracks missing from assets/raw
+node tools/generate-music.mjs --force --only game
+```
+
+The raw Lyria WAVs (about 6 MB each) are kept out of git. Sound effects are synthesized at runtime with Web Audio
+(`src/sfx.js`). The speaker button (or `M`) mutes music and effects together, on both the title screen and in game.
