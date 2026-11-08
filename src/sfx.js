@@ -1,23 +1,44 @@
 // Tiny synthesized sound effects (Web Audio), so the game ships with no audio files.
+// They share Phaser's AudioContext with the music, and this file also owns unlocking it on phones.
+
+// iOS mutes Web Audio while the ring/silent switch is on, unless the page says it plays media.
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* unsupported */ }
+
 const Sfx = (() => {
   let ctx = null;
   let master = null;
   let noiseBuf = null;
   let muted = localStorage.getItem('diwali-muted') === '1';
 
+  /** Use Phaser's AudioContext and keep it unlocked; `soundManager` is game.sound. */
+  function attach(soundManager) {
+    ctx = soundManager.context;
+    master = ctx.createGain();
+    master.gain.value = muted ? 0 : 0.5;
+    master.connect(ctx.destination);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+
+    // Phaser stops trying to unlock if the browser rejects its first attempt (iOS can on touchstart),
+    // which leaves the music waiting forever. Tell Phaser whenever the context starts running.
+    ctx.addEventListener('statechange', () => {
+      if (ctx.state === 'running' && soundManager.locked) soundManager.unlocked = true;
+    });
+    // Retry on every real gesture (touchend/click count as user activation on iOS; touchstart may not),
+    // and after the page comes back from the background, when iOS suspends or interrupts the context.
+    ['touchend', 'pointerup', 'click', 'keydown'].forEach((e) => document.addEventListener(e, unlock, true));
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) unlock(); });
+  }
+
   function unlock() {
-    if (!ctx) {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return;
-      ctx = new AC();
-      master = ctx.createGain();
-      master.gain.value = muted ? 0 : 0.5;
-      master.connect(ctx.destination);
-      noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-      const d = noiseBuf.getChannelData(0);
-      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-    }
-    if (ctx.state === 'suspended') ctx.resume();
+    if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return;
+    ctx.resume().catch(() => {});
+    // Older iOS only fully wakes the context once a sound starts inside the gesture.
+    const src = ctx.createBufferSource();
+    src.buffer = ctx.createBuffer(1, 1, 22050);
+    src.connect(ctx.destination);
+    src.start(0);
   }
 
   const ready = () => ctx && !muted;
@@ -52,6 +73,7 @@ const Sfx = (() => {
   }
 
   return {
+    attach,
     unlock,
     get muted() { return muted; },
     toggleMute() {

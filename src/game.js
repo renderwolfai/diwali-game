@@ -919,6 +919,10 @@ function startGame() {
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 2 },
     scene: [BootScene, MenuScene, GameScene],
+    callbacks: {
+      // Web Audio only; with Phaser's HTML5 Audio fallback the effects stay silent.
+      postBoot: (game) => { if (game.sound.context) Sfx.attach(game.sound); },
+    },
   });
 }
 
