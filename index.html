@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0726" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>Diwali Demon Pop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&display=swap" rel="stylesheet" />
+  <style>
+    html, body {
+      margin: 0; height: 100%; overflow: hidden;
+      background: #0b0726 url('assets/bg_wide.jpg') center / cover no-repeat;
+      touch-action: none; user-select: none; -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(11, 7, 38, 0.35), rgba(11, 7, 38, 0.85));
+      backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    }
+    #game { position: fixed; inset: 0; height: 100dvh; }
+    #game canvas { border-radius: 14px; box-shadow: 0 0 60px rgba(255, 170, 60, 0.25); }
+    @media (max-aspect-ratio: 10/16) { #game canvas { border-radius: 0; box-shadow: none; } }
+  </style>
+</head>
+<body>
+  <div id="game"></div>
+  <script src="lib/phaser.min.js"></script>
+  <script src="src/sfx.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
