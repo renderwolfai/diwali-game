@@ -4,6 +4,9 @@
  * Login is shared with the music script; see tools/vertex.mjs.
  *
  * Usage:  node tools/generate-assets.mjs [--only name1,name2] [--force] [--env path/to/.env]
+ *         node tools/generate-assets.mjs --edit <name> "<instruction>"
+ *           Sends the current assets/raw/<name>.png to the model with the instruction, and replaces it
+ *           with the edited image (e.g. --edit bg_portrait "Remove the crescent moon").
  * Post-processing (background removal, trimming, resizing) uses ImageMagick (`magick`).
  */
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -54,7 +57,7 @@ const ASSETS = [
     name: 'bg_portrait', aspect: '9:16', kind: 'bg',
     prompt:
       'Mobile game background illustration, portrait, Diwali night. Deep indigo-to-midnight-blue night sky filling the top ' +
-      'two thirds, mostly empty and dark with faint stars and a soft crescent moon in the corner (that area will hold game ' +
+      'two thirds, mostly empty and dark with faint stars and no moon (that area will hold game ' +
       'pieces so keep it uncluttered and low contrast). At the bottom: silhouettes of Indian rooftops and a temple dome, ' +
       'strings of warm marigold lights, glowing clay diyas on a ledge, a colorful rangoli at the very bottom center. ' +
       'Warm golden glow from the lamps contrasting the cool sky. Painterly, cozy, cute cartoon game style. No text, no characters.',
@@ -127,6 +130,24 @@ const auth = await vertexAuth(flag('--env'));
 await mkdir(RAW, { recursive: true });
 const todo = ASSETS.filter((a) => !only || only.includes(a.name));
 
+function finish(a, raw) {
+  if (a.kind === 'sprite') processSprite(raw, path.join(OUT, `${a.name}.png`));
+  else processBg(raw, path.join(OUT, `${a.name}.jpg`), a.aspect === '9:16' ? '900x1600' : '1920x1080');
+  console.log(`✓ ${a.name}`);
+}
+
+const editName = flag('--edit');
+if (editName) {
+  const a = ASSETS.find((x) => x.name === editName);
+  const instruction = args[args.indexOf('--edit') + 2];
+  if (!a || !instruction) throw new Error('usage: --edit <asset name> "<instruction>"');
+  const raw = path.join(RAW, `${a.name}.png`);
+  console.log(`editing ${a.name}…`);
+  await writeFile(raw, await generate(auth, instruction, a.aspect, raw));
+  finish(a, raw);
+  process.exit(0);
+}
+
 // The red demon is the style reference for the others, so make it first; the rest run in parallel.
 async function build(a) {
   const raw = path.join(RAW, `${a.name}.png`);
@@ -135,9 +156,7 @@ async function build(a) {
     const ref = a.ref ? path.join(RAW, `${a.ref}.png`) : null;
     await writeFile(raw, await generate(auth, a.prompt, a.aspect, ref));
   }
-  if (a.kind === 'sprite') processSprite(raw, path.join(OUT, `${a.name}.png`));
-  else processBg(raw, path.join(OUT, `${a.name}.jpg`), a.aspect === '9:16' ? '900x1600' : '1920x1080');
-  console.log(`✓ ${a.name}`);
+  finish(a, raw);
 }
 
 const first = todo.filter((a) => a.name === 'demon_red');
