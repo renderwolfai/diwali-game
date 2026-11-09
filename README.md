@@ -52,12 +52,12 @@ Each level starts with more rows and more colors, and the sky drops sooner:
 
 | Level | Starting rows | Colors | Weak shots before a new row |
 |------:|--------------:|-------:|----------------------------:|
-| 1     | 5             | 4      | 7                       |
-| 2     | 6             | 5      | 6                       |
-| 3     | 7             | 6      | 5                       |
-| 4     | 8             | 6      | 4                       |
-| 5     | 9             | 6      | 3                       |
-| 6+    | 10            | 6      | 3                       |
+| 1     | 5             | 4      | 7                           |
+| 2     | 6             | 5      | 2                           |
+| 3     | 7             | 6      | 1                           |
+| 4     | 8             | 6      | 1                           |
+| 5     | 9             | 6      | 1                           |
+| 6+    | 10            | 6      | 1                           |
 
 Each level picks its colors at random from the six demons. Starting boards are biased towards clumps of the
 same color, so there are good groups to aim for. Your score carries over from level to level. Game over starts

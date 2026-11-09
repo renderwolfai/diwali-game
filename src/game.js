@@ -343,7 +343,7 @@ class GameScene extends Phaser.Scene {
     return {
       rows: Math.min(4 + L, 10),
       colors: Math.min(3 + L, DEMONS.length),
-      shotsPerDrop: Math.max(3, 8 - L),
+      shotsPerDrop: L === 1 ? 7 : L === 2 ? 2 : 1,
     };
   }
 
